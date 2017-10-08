@@ -61,10 +61,6 @@ void application_init(void)
     static bc_button_t lcd_left;
     bc_button_init_virtual(&lcd_left, BC_MODULE_LCD_BUTTON_LEFT, bc_module_lcd_get_button_driver(), false);
     bc_button_set_event_handler(&lcd_left, lcd_button_event_handler, NULL);
-
-    static bc_button_t lcd_right;
-    bc_button_init_virtual(&lcd_right, BC_MODULE_LCD_BUTTON_RIGHT, bc_module_lcd_get_button_driver(), false);
-    bc_button_set_event_handler(&lcd_right, button_event_handler, NULL);
 }
 
 void application_task(void)
@@ -271,10 +267,12 @@ void lcd_button_event_handler(bc_button_t *self, bc_button_event_t event, void *
     (void) self;
     (void) event_param;
 
-    if (event == BC_BUTTON_EVENT_HOLD)
+    if (event != BC_BUTTON_EVENT_CLICK)
     {
-        bc_led_set_mode(&led, BC_LED_MODE_BLINK);
-
-        bc_scheduler_register(co2_calibration_task, NULL, bc_tick_get() + CO2_CALIBRATION_DELAY);
+        return;
     }
+
+    bc_led_set_mode(&led, BC_LED_MODE_ON);
+
+    bc_scheduler_register(co2_calibration_task, NULL, bc_tick_get() + CO2_CALIBRATION_DELAY);
 }
