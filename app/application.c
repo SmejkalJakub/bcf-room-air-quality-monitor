@@ -40,8 +40,8 @@ void application_init(void)
     temperature_tag_init(BC_I2C_I2C0, BC_TAG_TEMPERATURE_I2C_ADDRESS_DEFAULT, &temperature_tag_0_0);
 
     // Humidity Tag
-    static humidity_tag_t humidity_tag_0_2;
-    humidity_tag_init(BC_TAG_HUMIDITY_REVISION_R2, BC_I2C_I2C0, &humidity_tag_0_2);
+    static humidity_tag_t humidity_tag_0_4;
+    humidity_tag_init(BC_TAG_HUMIDITY_REVISION_R3, BC_I2C_I2C0, &humidity_tag_0_4);
 
     // CO2 Module
     static event_param_t co2_event_param = { .next_pub = 0 };
