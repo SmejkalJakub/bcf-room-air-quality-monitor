@@ -22,10 +22,9 @@ The following hardware components are used for this project:
 
 ## Buttons on LCD Module
 
-* Left button - Click to activate CO2 Module calibration
 * Both buttons are wired to boot button on Core Module, so they have same functionality:
   * Press to send event over radio
-  * Hold to pair node with gateway
+  * Hold to activate CO2 Module calibration
 
 ## License
 

@@ -28,8 +28,9 @@ static struct
 void application_init(void)
 {
     bc_led_init(&led, BC_GPIO_LED, false, false);
+    bc_led_set_mode(&led, BC_LED_MODE_OFF);
 
-    bc_radio_init();
+    bc_radio_init(BC_RADIO_MODE_NODE_SLEEPING);
 
     static bc_button_t button;
     bc_button_init(&button, BC_GPIO_BUTTON, BC_GPIO_PULL_DOWN, false);
@@ -58,9 +59,9 @@ void application_init(void)
     memset(&values, 0xff, sizeof(values));
     bc_module_lcd_init(&_bc_module_lcd_framebuffer);
 
-    static bc_button_t lcd_left;
-    bc_button_init_virtual(&lcd_left, BC_MODULE_LCD_BUTTON_LEFT, bc_module_lcd_get_button_driver(), false);
-    bc_button_set_event_handler(&lcd_left, lcd_button_event_handler, NULL);
+    bc_radio_pairing_request(FIRMWARE, VERSION);
+
+    bc_led_pulse(&led, 2000);
 }
 
 void application_task(void)
@@ -73,7 +74,7 @@ void application_task(void)
     int w;
     char str[32];
 
-    bc_module_core_pll_enable();
+    bc_system_pll_enable();
 
     bc_module_lcd_clear();
 
@@ -95,39 +96,16 @@ void application_task(void)
     bc_module_lcd_set_font(&bc_font_ubuntu_15);
     bc_module_lcd_draw_string(w, 100, "ppm", true);
 
-    bc_module_core_pll_disable();
+    bc_system_pll_disable();
 
     bc_module_lcd_update();
-}
-
-void button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param)
-{
-    (void) self;
-    (void) event_param;
-
-    if (event == BC_BUTTON_EVENT_PRESS)
-    {
-        bc_led_pulse(&led, 100);
-
-        static uint16_t event_count = 0;
-
-        bc_radio_pub_push_button(&event_count);
-
-        event_count++;
-    }
-    else if (event == BC_BUTTON_EVENT_HOLD)
-    {
-        bc_radio_enroll_to_gateway();
-
-        bc_led_pulse(&led, 1000);
-    }
 }
 
 static void temperature_tag_init(bc_i2c_channel_t i2c_channel, bc_tag_temperature_i2c_address_t i2c_address, temperature_tag_t *tag)
 {
     memset(tag, 0, sizeof(*tag));
 
-    tag->param.number = (i2c_channel << 7) | i2c_address;
+    tag->param.channel = i2c_address == BC_TAG_TEMPERATURE_I2C_ADDRESS_DEFAULT ? BC_RADIO_PUB_CHANNEL_R1_I2C0_ADDRESS_DEFAULT : BC_RADIO_PUB_CHANNEL_R1_I2C0_ADDRESS_ALTERNATE;
 
     bc_tag_temperature_init(&tag->self, i2c_channel, i2c_address);
 
@@ -150,7 +128,7 @@ void temperature_tag_event_handler(bc_tag_temperature_t *self, bc_tag_temperatur
     {
         if ((fabs(value - param->value) >= TEMPERATURE_TAG_PUB_VALUE_CHANGE) || (param->next_pub < bc_scheduler_get_spin_tick()))
         {
-            bc_radio_pub_thermometer(param->number, &value);
+            bc_radio_pub_temperature(param->channel, &value);
             param->value = value;
             param->next_pub = bc_scheduler_get_spin_tick() + TEMPERATURE_TAG_PUB_NO_CHANGE_INTEVAL;
 
@@ -162,28 +140,29 @@ void temperature_tag_event_handler(bc_tag_temperature_t *self, bc_tag_temperatur
 
 static void humidity_tag_init(bc_tag_humidity_revision_t revision, bc_i2c_channel_t i2c_channel, humidity_tag_t *tag)
 {
-    uint8_t address;
-
     memset(tag, 0, sizeof(*tag));
 
     if (revision == BC_TAG_HUMIDITY_REVISION_R1)
     {
-        address = 0x5f;
+        tag->param.channel = BC_RADIO_PUB_CHANNEL_R1_I2C0_ADDRESS_DEFAULT;
     }
     else if (revision == BC_TAG_HUMIDITY_REVISION_R2)
     {
-        address = 0x40;
+        tag->param.channel = BC_RADIO_PUB_CHANNEL_R2_I2C0_ADDRESS_DEFAULT;
     }
     else if (revision == BC_TAG_HUMIDITY_REVISION_R3)
     {
-        address = 0x40 | 0x0f; // 0x0f - hack
+        tag->param.channel = BC_RADIO_PUB_CHANNEL_R3_I2C0_ADDRESS_DEFAULT;
     }
     else
     {
         return;
     }
 
-    tag->param.number = (i2c_channel << 7) | address;
+    if (i2c_channel == BC_I2C_I2C1)
+    {
+        tag->param.channel |= 0x80;
+    }
 
     bc_tag_humidity_init(&tag->self, revision, i2c_channel, BC_TAG_HUMIDITY_I2C_ADDRESS_DEFAULT);
 
@@ -206,7 +185,7 @@ void humidity_tag_event_handler(bc_tag_humidity_t *self, bc_tag_humidity_event_t
     {
         if ((fabs(value - param->value) >= HUMIDITY_TAG_PUB_VALUE_CHANGE) || (param->next_pub < bc_scheduler_get_spin_tick()))
         {
-            bc_radio_pub_humidity(param->number, &value);
+            bc_radio_pub_humidity(param->channel, &value);
             param->value = value;
             param->next_pub = bc_scheduler_get_spin_tick() + HUMIDITY_TAG_PUB_NO_CHANGE_INTEVAL;
 
@@ -223,7 +202,7 @@ void co2_event_handler(bc_module_co2_event_t event, void *event_param)
 
     if (event == BC_MODULE_CO2_EVENT_UPDATE)
     {
-        if (bc_module_co2_get_concentration(&value))
+        if (bc_module_co2_get_concentration_ppm(&value))
         {
             if ((fabs(value - param->value) >= CO2_PUB_VALUE_CHANGE) || (param->next_pub < bc_scheduler_get_spin_tick()))
             {
@@ -244,7 +223,7 @@ void co2_calibration_task(void *param)
 
     bc_led_set_mode(&led, BC_LED_MODE_OFF);
 
-    bc_module_co2_calibration(BC_CO2_SENSOR_CALIBRATION_BACKGROUND_FILTERED);
+    bc_module_co2_calibration(BC_LP8_CALIBRATION_BACKGROUND_FILTERED);
 
     bc_scheduler_unregister(bc_scheduler_get_current_task_id());
 }
@@ -258,21 +237,29 @@ void battery_module_event_handler(bc_module_battery_event_t event, void *event_p
 
     if (bc_module_battery_get_voltage(&voltage))
     {
-        bc_radio_pub_battery(0, &voltage);
+        bc_radio_pub_battery(&voltage);
     }
 }
 
-void lcd_button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param)
+void button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param)
 {
-    (void) self;
-    (void) event_param;
+    (void)self;
+    (void)event_param;
 
-    if (event != BC_BUTTON_EVENT_CLICK)
+    if (event == BC_BUTTON_EVENT_PRESS)
     {
-        return;
+        bc_led_pulse(&led, 100);
+
+        static uint16_t event_count = 0;
+
+        bc_radio_pub_push_button(&event_count);
+
+        event_count++;
     }
+    else if (event == BC_BUTTON_EVENT_HOLD)
+    {
+        bc_led_set_mode(&led, BC_LED_MODE_ON);
 
-    bc_led_set_mode(&led, BC_LED_MODE_ON);
-
-    bc_scheduler_register(co2_calibration_task, NULL, bc_tick_get() + CO2_CALIBRATION_DELAY);
+        bc_scheduler_register(co2_calibration_task, NULL, bc_tick_get() + CO2_CALIBRATION_DELAY);
+    }
 }
