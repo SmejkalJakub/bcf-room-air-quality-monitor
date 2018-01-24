@@ -3,15 +3,15 @@
 
 #define TEMPERATURE_TAG_PUB_NO_CHANGE_INTEVAL (5 * 60 * 1000)
 #define TEMPERATURE_TAG_PUB_VALUE_CHANGE 0.1f
-#define TEMPERATURE_TAG_UPDATE_INTERVAL (1 * 1000)
+#define TEMPERATURE_TAG_UPDATE_INTERVAL (30 * 1000)
 
 #define HUMIDITY_TAG_PUB_NO_CHANGE_INTEVAL (5 * 60 * 1000)
 #define HUMIDITY_TAG_PUB_VALUE_CHANGE 1.0f
-#define HUMIDITY_TAG_UPDATE_INTERVAL (1 * 1000)
+#define HUMIDITY_TAG_UPDATE_INTERVAL (30 * 1000)
 
 #define CO2_PUB_NO_CHANGE_INTERVAL (5 * 60 * 1000)
 #define CO2_PUB_VALUE_CHANGE 50.0f
-#define CO2_UPDATE_INTERVAL (1 * 60 * 1000)
+#define CO2_UPDATE_INTERVAL (3 * 60 * 1000)
 #define CO2_CALIBRATION_DELAY (10 * 60 * 1000)
 
 #define BATTERY_UPDATE_INTERVAL (60 * 60 * 1000)
@@ -68,6 +68,7 @@ void application_task(void)
 {
     if (!bc_module_lcd_is_ready())
     {
+        bc_scheduler_plan_current_relative(500);
         return;
     }
 
@@ -99,6 +100,8 @@ void application_task(void)
     bc_system_pll_disable();
 
     bc_module_lcd_update();
+
+    bc_scheduler_plan_current_relative(10000);
 }
 
 static void temperature_tag_init(bc_i2c_channel_t i2c_channel, bc_tag_temperature_i2c_address_t i2c_address, temperature_tag_t *tag)
@@ -133,7 +136,6 @@ void temperature_tag_event_handler(bc_tag_temperature_t *self, bc_tag_temperatur
             param->next_pub = bc_scheduler_get_spin_tick() + TEMPERATURE_TAG_PUB_NO_CHANGE_INTEVAL;
 
             values.temperature = value;
-            bc_scheduler_plan_now(0);
         }
     }
 }
@@ -190,7 +192,6 @@ void humidity_tag_event_handler(bc_tag_humidity_t *self, bc_tag_humidity_event_t
             param->next_pub = bc_scheduler_get_spin_tick() + HUMIDITY_TAG_PUB_NO_CHANGE_INTEVAL;
 
             values.humidity = value;
-            bc_scheduler_plan_now(0);
         }
     }
 }
@@ -211,7 +212,6 @@ void co2_event_handler(bc_module_co2_event_t event, void *event_param)
                 param->next_pub = bc_scheduler_get_spin_tick() + CO2_PUB_NO_CHANGE_INTERVAL;
 
                 values.co2_concentation = value;
-                bc_scheduler_plan_now(0);
             }
         }
     }
