@@ -13,12 +13,12 @@
 
 The following hardware components are used for this project:
 
-* **[Humidity Tag](https://shop.bigclown.com/products/humidity-tag)**
-* **[Temperature Tag](https://shop.bigclown.com/products/temperature-tag)**
-* **[LCD Module - BG](https://shop.bigclown.com/products/lcd-module)**
-* **[Core Module](https://shop.bigclown.com/products/core-module)**
-* **[CO2 Module](https://shop.bigclown.com/products/co2-module)**
-* **[Battery Module](https://shop.bigclown.com/products/battery-module)**
+* **[Humidity Tag](https://shop.bigclown.com/humidity-tag)**
+* **[Temperature Tag](https://shop.bigclown.com/temperature-tag)**
+* **[LCD Module - BG](https://shop.bigclown.com/lcd-module-bg)**
+* **[Core Module](https://shop.bigclown.com/core-module)**
+* **[CO2 Module](https://shop.bigclown.com/co2-module)**
+* **[Battery Module](https://shop.bigclown.com/battery-module)**
 
 ## Buttons on LCD Module
 
