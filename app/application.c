@@ -51,13 +51,13 @@ void application_init(void)
     bc_module_co2_set_event_handler(co2_event_handler, &co2_event_param);
 
     // Battery Module
-    bc_module_battery_init(BC_MODULE_BATTERY_FORMAT_STANDARD);
+    bc_module_battery_init();
     bc_module_battery_set_event_handler(battery_module_event_handler, NULL);
     bc_module_battery_set_update_interval(BATTERY_UPDATE_INTERVAL);
 
     // LCD Module
     memset(&values, 0xff, sizeof(values));
-    bc_module_lcd_init(&_bc_module_lcd_framebuffer);
+    bc_module_lcd_init();
 
     bc_radio_pairing_request(FIRMWARE, VERSION);
 
