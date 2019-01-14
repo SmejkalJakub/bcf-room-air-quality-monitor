@@ -1,5 +1,4 @@
 #include <application.h>
-#include <radio.h>
 
 #define TEMPERATURE_TAG_PUB_NO_CHANGE_INTEVAL (5 * 60 * 1000)
 #define TEMPERATURE_TAG_PUB_VALUE_CHANGE 0.1f
@@ -230,21 +229,23 @@ void co2_calibration_task(void *param)
 
 void battery_module_event_handler(bc_module_battery_event_t event, void *event_param)
 {
-    (void) event;
     (void) event_param;
 
     float voltage;
 
-    if (bc_module_battery_get_voltage(&voltage))
+    if (event == BC_MODULE_BATTERY_EVENT_UPDATE)
     {
-        bc_radio_pub_battery(&voltage);
+        if (bc_module_battery_get_voltage(&voltage))
+        {
+            bc_radio_pub_battery(&voltage);
+        }
     }
 }
 
 void button_event_handler(bc_button_t *self, bc_button_event_t event, void *event_param)
 {
-    (void)self;
-    (void)event_param;
+    (void) self;
+    (void) event_param;
 
     if (event == BC_BUTTON_EVENT_PRESS)
     {

@@ -9,7 +9,6 @@
 #define VERSION "2.0"
 #endif
 
-#include <bc_common.h>
 #include <bcl.h>
 
 typedef struct
